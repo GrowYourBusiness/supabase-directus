@@ -463,37 +463,37 @@ services:
     networks:
       - backend
 
-  vector:
-    container_name: supabase-vector
-    image: timberio/vector:0.28.1-alpine
-    restart: unless-stopped
-    volumes:
-      - ./volumes/logs/vector.yml:/etc/vector/vector.yml:ro,z
-      - ${DOCKER_SOCKET_LOCATION}:/var/run/docker.sock:ro,z
-    healthcheck:
-      test:
-        [
-          "CMD",
-          "wget",
-          "--no-verbose",
-          "--tries=1",
-          "--spider",
-          "http://vector:9001/health"
-        ]
-      timeout: 5s
-      interval: 5s
-      retries: 3
-    environment:
-      LOGFLARE_API_KEY: ${LOGFLARE_API_KEY}
-    command:
-      [
-        "--config",
-        "/etc/vector/vector.yml"
-      ]
-    security_opt:
-      - "label=disable"
-    networks:
-      - backend
+  # vector:
+  #   container_name: supabase-vector
+  #   image: timberio/vector:0.28.1-alpine
+  #   restart: unless-stopped
+  #   volumes:
+  #     - ./volumes/logs/vector.yml:/etc/vector/vector.yml:ro,z
+  #     - ${DOCKER_SOCKET_LOCATION}:/var/run/docker.sock:ro,z
+  #   healthcheck:
+  #     test:
+  #       [
+  #         "CMD",
+  #         "wget",
+  #         "--no-verbose",
+  #         "--tries=1",
+  #         "--spider",
+  #         "http://vector:9001/health"
+  #       ]
+  #     timeout: 5s
+  #     interval: 5s
+  #     retries: 3
+  #   environment:
+  #     LOGFLARE_API_KEY: ${LOGFLARE_API_KEY}
+  #   command:
+  #     [
+  #       "--config",
+  #       "/etc/vector/vector.yml"
+  #     ]
+  #   security_opt:
+  #     - "label=disable"
+  #   networks:
+  #     - backend
 
   # Update the DATABASE_URL if you are using an external Postgres database
   supavisor:
@@ -551,23 +551,35 @@ services:
       - backend
 
   directus:
-    image: directus/directus:latest
-    restart: always
+    container_name: supabase-directus
+    image: directus/directus:10.8.3
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8055/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
     environment:
-      KEY: directus-key
-      SECRET: directus-secret
-      ADMIN_EMAIL: admin@example.com
-      ADMIN_PASSWORD: admin
+      KEY: ${DIRECTUS_KEY}
+      SECRET: ${DIRECTUS_SECRET}
+      ADMIN_EMAIL: ${DIRECTUS_ADMIN_EMAIL}
+      ADMIN_PASSWORD: ${DIRECTUS_ADMIN_PASSWORD}
       DB_CLIENT: pg
-      DB_HOST: db
-      DB_PORT: 5432
-      DB_DATABASE: postgres
+      DB_HOST: ${POSTGRES_HOST}
+      DB_PORT: ${POSTGRES_PORT}
+      DB_DATABASE: ${POSTGRES_DB}
       DB_USER: postgres
-      DB_PASSWORD: postgres
+      DB_PASSWORD: ${POSTGRES_PASSWORD}
+      CACHE_ENABLED: "true"
+      CACHE_STORE: memory
+      RATE_LIMITER_ENABLED: "true"
+      RATE_LIMITER_POINTS: 25
+      RATE_LIMITER_DURATION: 1
     ports:
-      - "8055:8055"
+      - "${DIRECTUS_PORT}:8055"
     depends_on:
-      - db
+      db:
+        condition: service_healthy
     networks:
       - backend
 
